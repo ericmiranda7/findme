@@ -3,11 +3,13 @@ package com.example.findme
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,7 +24,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.findme.ui.theme.FindMeTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.accompanist.permissions.rememberPermissionState
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
@@ -50,6 +54,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.Q)
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -64,46 +69,12 @@ fun Map(modifier: Modifier = Modifier) {
             )
         )
 
-        if (locationPermissionsState.allPermissionsGranted) {
-            Column {
-                Text(text = "All location permissions granted!")
+        val backgroundPermissionState = rememberPermissionState(
+            Manifest.permission.ACCESS_BACKGROUND_LOCATION
+        )
 
-                val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
-                val cameraPositionState = rememberCameraPositionState()
-                val locationMarkerState = rememberMarkerState()
-                Log.d("defaults", "${cameraPositionState.position}, $locationMarkerState")
-
-                // this time, let's subscribe for location updates
-                val locationRequest = LocationRequest
-                    .Builder(TimeUnit.SECONDS.toMillis(10))
-                    .setPriority(Priority.PRIORITY_HIGH_ACCURACY).build()
-
-                val locationCallback = object : LocationCallback() {
-                    override fun onLocationResult(locationUpdate: LocationResult) {
-                        super.onLocationResult(locationUpdate)
-                        Log.d("location update", locationUpdate.lastLocation.toString())
-                        val updatedLatLng = LatLng(
-                            locationUpdate.lastLocation!!.latitude,
-                            locationUpdate.lastLocation!!.longitude
-                        )
-                        cameraPositionState.position =
-                            CameraPosition.fromLatLngZoom(updatedLatLng, 15f)
-                        locationMarkerState.position = updatedLatLng
-                    }
-                }
-
-                fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null)
-
-                GoogleMap(
-                    modifier = Modifier.fillMaxSize(), cameraPositionState = cameraPositionState
-                ) {
-                    Marker(
-                        state = locationMarkerState,
-                        title = "Current location",
-                        snippet = "Marker of current location"
-                    )
-                }
-            }
+        if (locationPermissionsState.allPermissionsGranted && backgroundPermissionState.status.isGranted) {
+            Text(text = "All location permissions granted!")
         } else {
             val allPermissionsRevoked =
                 locationPermissionsState.permissions.size == locationPermissionsState.revokedPermissions.size
@@ -129,6 +100,12 @@ fun Map(modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.height(8.dp))
             Button(onClick = { locationPermissionsState.launchMultiplePermissionRequest() }) {
                 Text(buttonText)
+            }
+
+            if (!backgroundPermissionState.status.isGranted) {
+                Button(onClick = { backgroundPermissionState.launchPermissionRequest() }) {
+                    Text("Request background permissions")
+                }
             }
         }
 
