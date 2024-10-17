@@ -89,6 +89,18 @@ fun Map(modifier: Modifier = Modifier) {
                         cameraPositionState.position =
                             CameraPosition.fromLatLngZoom(updatedLatLng, 15f)
                         locationMarkerState.position = updatedLatLng
+
+
+                        // custom geofence logic with lat, long
+                        val inRange = true
+                        if (inRange) {
+                            val i = Intent(Intent.ACTION_SEND)
+                            i.setType("message/rfc822")
+                            i.putExtra(Intent.EXTRA_EMAIL, arrayOf("recipient@example.com"))
+                            i.putExtra(Intent.EXTRA_SUBJECT, "subject of email")
+                            i.putExtra(Intent.EXTRA_TEXT, "body of email")
+                            context.startActivity(Intent.createChooser(i, "Send mail..."))
+                        }
                     }
                 }
 
